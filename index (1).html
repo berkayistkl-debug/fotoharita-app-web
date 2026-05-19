@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FotoHarita — Fotoğraf Noktalarını Keşfet</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --coral: #FF5B4A;
+      --orange: #FF8C42;
+      --navy: #0F1923;
+      --navy-mid: #162030;
+      --navy-light: #1E2D40;
+      --text: #E8EDF2;
+      --muted: #6B7F8F;
+      --border: #1E2D40;
+      --white: #FFFFFF;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--navy);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      overflow-x: hidden;
+    }
+
+    /* NOISE TEXTURE */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      padding: 20px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      backdrop-filter: blur(12px);
+      background: rgba(15, 25, 35, 0.8);
+      border-bottom: 1px solid rgba(255, 91, 74, 0.1);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .nav-logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--coral), var(--orange));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .nav-logo-text {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      color: var(--white);
+      font-weight: 700;
+    }
+
+    .nav-link {
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 0.04em;
+      transition: color 0.2s;
+    }
+
+    .nav-link:hover { color: var(--coral); }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 120px 40px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 70% 50%, rgba(255, 91, 74, 0.12) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 20% 80%, rgba(255, 140, 66, 0.08) 0%, transparent 60%);
+    }
+
+    .hero-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,91,74,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,91,74,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    .hero-content {
+      max-width: 1100px;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+      position: relative;
+      z-index: 2;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 91, 74, 0.1);
+      border: 1px solid rgba(255, 91, 74, 0.2);
+      border-radius: 100px;
+      padding: 6px 14px;
+      font-size: 12px;
+      color: var(--coral);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      animation: fadeUp 0.8s ease both;
+    }
+
+    .hero-badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--coral);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(42px, 6vw, 72px);
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      color: var(--white);
+      margin-bottom: 24px;
+      animation: fadeUp 0.8s ease 0.1s both;
+    }
+
+    h1 em {
+      color: var(--coral);
+      font-style: italic;
+    }
+
+    .hero-desc {
+      font-size: 17px;
+      line-height: 1.7;
+      color: var(--muted);
+      margin-bottom: 40px;
+      animation: fadeUp 0.8s ease 0.2s both;
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      animation: fadeUp 0.8s ease 0.3s both;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, var(--coral), var(--orange));
+      color: white;
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 8px 30px rgba(255, 91, 74, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(255, 91, 74, 0.4);
+    }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      color: var(--text);
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 400;
+      text-decoration: none;
+      border: 1px solid var(--border);
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--coral);
+      color: var(--coral);
+    }
+
+    /* PHONE MOCKUP */
+    .hero-visual {
+      display: flex;
+      justify-content: center;
+      animation: fadeUp 0.8s ease 0.2s both;
+    }
+
+    .phone-mockup {
+      width: 260px;
+      height: 520px;
+      background: var(--navy-light);
+      border-radius: 40px;
+      border: 2px solid rgba(255,255,255,0.08);
+      position: relative;
+      overflow: hidden;
+      box-shadow:
+        0 40px 80px rgba(0,0,0,0.5),
+        0 0 0 1px rgba(255,255,255,0.04),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    .phone-notch {
+      width: 80px;
+      height: 24px;
+      background: var(--navy);
+      border-radius: 0 0 16px 16px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
+    }
+
+    .phone-screen {
+      padding: 8px 12px 16px;
+      height: calc(100% - 24px);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .phone-map {
+      flex: 1;
+      background: var(--navy-mid);
+      border-radius: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Animated map dots */
+    .map-dot {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .map-dot::after {
+      content: '📷';
+      font-size: 12px;
+      transform: rotate(45deg);
+    }
+
+    .map-dot-1 { background: var(--coral); top: 30%; left: 25%; animation: dotPop 2s ease 0.5s both; }
+    .map-dot-2 { background: var(--orange); top: 50%; left: 55%; animation: dotPop 2s ease 0.8s both; }
+    .map-dot-3 { background: #FF9F6A; top: 20%; left: 60%; animation: dotPop 2s ease 1.1s both; }
+
+    @keyframes dotPop {
+      0% { opacity: 0; transform: rotate(-45deg) scale(0); }
+      70% { transform: rotate(-45deg) scale(1.2); }
+      100% { opacity: 1; transform: rotate(-45deg) scale(1); }
+    }
+
+    .map-grid-line {
+      position: absolute;
+      background: rgba(255,255,255,0.03);
+    }
+
+    .map-grid-line.h { height: 1px; width: 100%; }
+    .map-grid-line.v { width: 1px; height: 100%; }
+
+    .phone-bottom {
+      display: flex;
+      gap: 8px;
+    }
+
+    .phone-card {
+      flex: 1;
+      background: var(--navy-mid);
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .phone-card-label {
+      font-size: 8px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .phone-card-value {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--coral);
+    }
+
+    /* FEATURES */
+    .features {
+      padding: 100px 40px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--coral);
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(28px, 4vw, 44px);
+      color: var(--white);
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      margin-bottom: 60px;
+    }
+
+    .section-title em { color: var(--coral); font-style: italic; }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: var(--navy-mid);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      transition: border-color 0.3s, transform 0.3s;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(255, 91, 74, 0.3);
+      transform: translateY(-4px);
+    }
+
+    .feature-icon {
+      width: 44px;
+      height: 44px;
+      background: rgba(255, 91, 74, 0.1);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      margin-bottom: 16px;
+    }
+
+    .feature-title {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+
+    .feature-desc {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* CTA SECTION */
+    .cta-section {
+      margin: 0 40px 100px;
+      background: linear-gradient(135deg, rgba(255,91,74,0.12), rgba(255,140,66,0.08));
+      border: 1px solid rgba(255, 91, 74, 0.15);
+      border-radius: 24px;
+      padding: 80px 60px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(255,91,74,0.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .cta-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(28px, 4vw, 48px);
+      color: var(--white);
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .cta-desc {
+      font-size: 16px;
+      color: var(--muted);
+      margin-bottom: 36px;
+      position: relative;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      position: relative;
+    }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    footer p {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    footer a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 13px;
+      transition: color 0.2s;
+    }
+
+    footer a:hover { color: var(--coral); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 768px) {
+      nav { padding: 16px 20px; }
+      .hero { padding: 100px 20px 60px; }
+      .hero-content { grid-template-columns: 1fr; gap: 40px; }
+      .hero-visual { order: -1; }
+      .phone-mockup { width: 200px; height: 400px; }
+      .features { padding: 60px 20px; }
+      .cta-section { margin: 0 20px 60px; padding: 50px 24px; }
+      footer { padding: 24px 20px; flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a href="#" class="nav-logo">
+      <div class="nav-logo-icon">📍</div>
+      <span class="nav-logo-text">FotoHarita</span>
+    </a>
+    <a href="https://berkayistkl-debug.github.io/fotoharita-privacy" class="nav-link">Gizlilik Politikası</a>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-content">
+      <div>
+        <div class="hero-badge">Yakında App Store & Google Play'de</div>
+        <h1>Fotoğraf noktalarını <em>haritada</em> keşfet</h1>
+        <p class="hero-desc">
+          Şehrin en güzel fotoğraf çekim noktalarını keşfet, kendi bulduğun noktaları topluluğla paylaş. GPS doğrulamalı, güvenilir lokasyonlar.
+        </p>
+        <div class="hero-cta">
+          <a href="#" class="btn-primary">
+            🤖 Google Play'de İndir
+          </a>
+          <a href="#" class="btn-secondary">
+            🍎 App Store'da İndir
+          </a>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <div class="phone-mockup">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="phone-map">
+              <div class="map-grid-line h" style="top:25%"></div>
+              <div class="map-grid-line h" style="top:50%"></div>
+              <div class="map-grid-line h" style="top:75%"></div>
+              <div class="map-grid-line v" style="left:33%"></div>
+              <div class="map-grid-line v" style="left:66%"></div>
+              <div class="map-dot map-dot-1"></div>
+              <div class="map-dot map-dot-2"></div>
+              <div class="map-dot map-dot-3"></div>
+            </div>
+            <div class="phone-bottom">
+              <div class="phone-card">
+                <span class="phone-card-label">Nokta</span>
+                <span class="phone-card-value">1.2K</span>
+              </div>
+              <div class="phone-card">
+                <span class="phone-card-label">Koin</span>
+                <span class="phone-card-value">340</span>
+              </div>
+              <div class="phone-card">
+                <span class="phone-card-label">Fotoğraf</span>
+                <span class="phone-card-value">48</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="features">
+    <div class="section-label">Özellikler</div>
+    <h2 class="section-title">Her karenin <em>hikayesi</em> var</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">📍</div>
+        <div class="feature-title">Haritada Keşfet</div>
+        <div class="feature-desc">Binlerce fotoğraf noktasını interaktif harita üzerinde gör, filtrele ve keşfet.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">✅</div>
+        <div class="feature-title">GPS Doğrulaması</div>
+        <div class="feature-desc">Her konum GPS ile doğrulanır. Güvenilir ve gerçek lokasyonlar.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📷</div>
+        <div class="feature-title">Fotoğraflarını Paylaş</div>
+        <div class="feature-desc">Kendi keşfettiğin noktaları ekle, fotoğraflarınla topluluğa ilham ver.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏆</div>
+        <div class="feature-title">Koin Kazan</div>
+        <div class="feature-desc">Katkıda buldukça koin kazan, toplulukta sıranı yükselt.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <div class="cta-section">
+    <h2 class="cta-title">Bir sonraki kare seni bekliyor</h2>
+    <p class="cta-desc">FotoHarita ile şehrini yeniden keşfet.</p>
+    <div class="cta-buttons">
+      <a href="#" class="btn-primary">🤖 Google Play</a>
+      <a href="#" class="btn-secondary">🍎 App Store</a>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>© 2025 FotoHarita. Tüm hakları saklıdır.</p>
+    <a href="https://berkayistkl-debug.github.io/fotoharita-privacy">Gizlilik Politikası</a>
+  </footer>
+
+</body>
+</html>
